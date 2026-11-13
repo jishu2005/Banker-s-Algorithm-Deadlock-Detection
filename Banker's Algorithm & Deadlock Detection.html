@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Banker’s Algorithm & Deadlock Detection</title>
+<style>
+:root{--bg:#eef1f4;--panel:#fff;--ink:#1c2630;--mute:#64717e;--line:#cfd6dd;--acc:#0f6e74;--accbg:#dff0f0;--ok:#1d7a3e;--okbg:#e0f3e6;--bad:#b3261e;--badbg:#fbe4e2;--warn:#8a5a00;--warnbg:#fbefd2;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12181e;--panel:#1b232b;--ink:#e6ebf0;--mute:#90a0ae;--line:#34414d;--acc:#58c4c9;--accbg:#173a3d;--ok:#6fd392;--okbg:#173626;--bad:#ff8d85;--badbg:#42201e;--warn:#f2c35c;--warnbg:#3b2e10}}
+:root[data-theme="dark"]{--bg:#12181e;--panel:#1b232b;--ink:#e6ebf0;--mute:#90a0ae;--line:#34414d;--acc:#58c4c9;--accbg:#173a3d;--ok:#6fd392;--okbg:#173626;--bad:#ff8d85;--badbg:#42201e;--warn:#f2c35c;--warnbg:#3b2e10}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1040px;margin:0 auto;padding:20px 16px 48px}
+h1{font:600 28px/1.2 ui-serif,Georgia,serif;margin:0 0 4px}
+h2{font:600 17px/1.3 ui-serif,Georgia,serif;margin:0 0 10px}
+.sub{color:var(--mute);margin:0 0 18px}
+.tabs{display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;font:inherit;font-weight:600;color:var(--mute);cursor:pointer}
+.tabs button[aria-selected=true]{color:var(--acc);border-color:var(--acc)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+.grids{display:flex;flex-wrap:wrap;gap:20px}
+label{font-size:13px;color:var(--mute);display:block;margin-bottom:3px}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:5px 8px}
+input[type=number]{width:62px;text-align:center}
+table{border-collapse:collapse}
+td,th{padding:3px;text-align:center;font-size:14px}
+th{color:var(--mute);font-weight:600}
+td.rl{color:var(--mute);font-weight:600;text-align:right;padding-right:8px}
+td.calc{font-variant-numeric:tabular-nums;color:var(--acc);font-weight:600;min-width:40px}
+.btn{font:inherit;font-weight:600;border-radius:6px;border:1px solid var(--acc);background:var(--acc);color:var(--panel);padding:8px 14px;cursor:pointer}
+.btn.sec{background:none;color:var(--acc)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.res{border-radius:8px;padding:12px 14px;margin-top:12px;font-weight:600}
+.res.ok{background:var(--okbg);color:var(--ok)}.res.bad{background:var(--badbg);color:var(--bad)}.res.warn{background:var(--warnbg);color:var(--warn)}
+.seq{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.chip{background:var(--panel);color:var(--ink);border:1px solid var(--ok);border-radius:14px;padding:2px 12px;font-weight:600}
+.arrow{color:var(--mute)}
+.log{overflow-x:auto;margin-top:10px}
+.log table{width:100%}
+.log th,.log td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;white-space:nowrap}
+.hidden{display:none}
+svg{width:100%;max-width:460px;height:auto;display:block}
+.muted{color:var(--mute);font-size:13px}
+</style>
+</head>
+<body>
+<main>
+<h1>Banker’s algorithm & deadlock detection</h1>
+<p class="sub">Check whether a resource request keeps the system safe, or find deadlocked processes when no avoidance is used.</p>
+
+<div class="tabs" role="tablist">
+  <button role="tab" id="t1" aria-selected="true">Deadlock avoidance (Banker’s)</button>
+  <button role="tab" id="t2" aria-selected="false">Deadlock detection</button>
+</div>
+
+<!-- BANKER -->
+<section id="p1">
+  <div class="card">
+    <div class="row">
+      <div><label for="n1">Processes</label><input id="n1" type="number" min="1" max="8" value="5"></div>
+      <div><label for="m1">Resource types</label><input id="m1" type="number" min="1" max="6" value="3"></div>
+      <button class="btn sec" id="ex1">Load textbook example</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="grids">
+      <div><h2>Allocation</h2><div id="g-alloc"></div></div>
+      <div><h2>Max demand</h2><div id="g-max"></div></div>
+      <div><h2>Need (Max − Allocation)</h2><div id="g-need"></div></div>
+      <div><h2>Available</h2><div id="g-avail"></div></div>
+    </div>
+    <div class="btns"><button class="btn" id="chk">Check current state</button></div>
+  </div>
+  <div class="card">
+    <h2>Resource request</h2>
+    <div class="row">
+      <div><label for="rp">Process</label><select id="rp"></select></div>
+      <div><label>Request vector</label><div id="rvec" class="row" style="gap:4px"></div></div>
+      <button class="btn" id="req">Evaluate request</button>
+      <button class="btn sec hidden" id="grant">Grant it (update state)</button>
+    </div>
+  </div>
+  <div id="out1"></div>
+</section>
+
+<!-- DETECTION -->
+<section id="p2" class="hidden">
+  <div class="card">
+    <div class="row">
+      <div><label for="n2">Processes</label><input id="n2" type="number" min="1" max="8" value="5"></div>
+      <div><label for="m2">Resource types</label><input id="m2" type="number" min="1" max="6" value="3"></div>
+      <button class="btn sec" id="ex2">Load deadlock example</button>
+      <button class="btn sec" id="ex3">Load no-deadlock example</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="grids">
+      <div><h2>Allocation</h2><div id="d-alloc"></div></div>
+      <div><h2>Request (waiting for)</h2><div id="d-req"></div></div>
+      <div><h2>Available</h2><div id="d-avail"></div></div>
+    </div>
+    <div class="btns"><button class="btn" id="det">Detect deadlock</button></div>
+  </div>
+  <div id="out2"></div>
+</section>
+</main>
+
+<script>
+const $=s=>document.querySelector(s);
+const P=i=>'P'+i, R=j=>String.fromCharCode(65+j);
+const zeros=(n,m)=>Array.from({length:n},()=>Array(m).fill(0));
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v|0));
+
+/* ---------- editable matrix ---------- */
+function matrix(el,data,rowLabels,colLabels,onchange){
+  let h='<table><tr><th></th>'+colLabels.map(c=>`<th>${c}</th>`).join('')+'</tr>';
+  data.forEach((row,i)=>{
+    h+=`<tr>${rowLabels?`<td class="rl">${rowLabels[i]}</td>`:''}`;
+    row.forEach((v,j)=>h+=`<td><input type="number" min="0" value="${v}" data-i="${i}" data-j="${j}" aria-label="${rowLabels?rowLabels[i]:'Available'} ${colLabels[j]}"></td>`);
+    h+='</tr>';
+  });
+  el.innerHTML=h+'</table>';
+  el.querySelectorAll('input').forEach(inp=>inp.oninput=()=>{
+    data[inp.dataset.i][inp.dataset.j]=Math.max(0,parseInt(inp.value)||0);onchange&&onchange();});
+}
+const resize=(a,n,m)=>Array.from({length:n},(_,i)=>Array.from({length:m},(_,j)=>(a[i]&&a[i][j])||0));
+const cols=m=>Array.from({length:m},(_,j)=>R(j));
+const rows=n=>Array.from({length:n},(_,i)=>P(i));
+
+/* ---------- tabs ---------- */
+[['t1','p1','t2','p2'],['t2','p2','t1','p1']].forEach(([a,pa,b,pb])=>{
+  $('#'+a).onclick=()=>{$('#'+a).setAttribute('aria-selected',true);$('#'+b).setAttribute('aria-selected',false);
+    $('#'+pa).classList.remove('hidden');$('#'+pb).classList.add('hidden');};
+});
+
+/* ================= BANKER'S ================= */
+let B={n:5,m:3,alloc:[],max:[],avail:[]},pending=null;
+
+function bankerSafety(alloc,need,avail){
+  const n=alloc.length,m=avail.length;
+  let work=[...avail],fin=Array(n).fill(false),seq=[],steps=[];
+  let progress=true;
+  while(progress){
+    progress=false;
+    for(let i=0;i<n;i++){
+      if(!fin[i]&&need[i].every((x,j)=>x<=work[j])){
+        const before=[...work];
+        work=work.map((w,j)=>w+alloc[i][j]);
+        fin[i]=true;seq.push(i);progress=true;
+        steps.push({p:i,need:need[i],before,after:[...work]});
+      }
+    }
+  }
+  return {safe:fin.every(Boolean),seq,steps,stuck:fin.map((f,i)=>f?-1:i).filter(i=>i>=0)};
+}
+const needOf=()=>B.max.map((r,i)=>r.map((v,j)=>v-B.alloc[i][j]));
+
+function renderB(keepOut){
+  matrix($('#g-alloc'),B.alloc,rows(B.n),cols(B.m),refreshNeed);
+  matrix($('#g-max'),B.max,rows(B.n),cols(B.m),refreshNeed);
+  matrix($('#g-avail'),[B.avail],null,cols(B.m));
+  refreshNeed();
+  $('#rp').innerHTML=rows(B.n).map((p,i)=>`<option value="${i}">${p}</option>`).join('');
+  $('#rvec').innerHTML=cols(B.m).map(c=>`<div style="text-align:center"><label>${c}</label><input type="number" min="0" value="0" class="rv"></div>`).join('');
+  pending=null;$('#grant').classList.add('hidden');
+  if(!keepOut)$('#out1').innerHTML='';
+}
+function refreshNeed(){
+  const need=needOf();
+  $('#g-need').innerHTML='<table><tr><th></th>'+cols(B.m).map(c=>`<th>${c}</th>`).join('')+'</tr>'+
+    need.map((r,i)=>`<tr><td class="rl">${P(i)}</td>`+r.map(v=>`<td class="calc" style="${v<0?'color:var(--bad)':''}">${v}</td>`).join('')+'</tr>').join('')+'</table>';
+}
+function resizeB(){
+  B.n=clamp($('#n1').value,1,8)||1;B.m=clamp($('#m1').value,1,6)||1;
+  B.alloc=resize(B.alloc,B.n,B.m);B.max=resize(B.max,B.n,B.m);B.avail=resize([B.avail],1,B.m)[0];
+  renderB();
+}
+$('#n1').onchange=$('#m1').onchange=resizeB;
+
+$('#ex1').onclick=()=>{
+  B.n=5;B.m=3;$('#n1').value=5;$('#m1').value=3;
+  B.alloc=[[0,1,0],[2,0,0],[3,0,2],[2,1,1],[0,0,2]];
+  B.max=[[7,5,3],[3,2,2],[9,0,2],[2,2,2],[4,3,3]];
+  B.avail=[3,3,2];renderB();
+};
+
+function validateB(){
+  const need=needOf();
+  if(need.some(r=>r.some(v=>v<0))){
+    $('#out1').innerHTML='<div class="res bad">Invalid input: some process holds more than its maximum demand (negative Need).</div>';return null;}
+  return need;
+}
+function showSafety(res,title,extra=''){
+  let h=`<div class="card"><h2>${title}</h2>`;
+  if(res.safe){
+    h+=`<div class="res ok">Safe state. ${extra}<div class="seq">`+
+       res.seq.map((p,k)=>`<span class="chip">${P(p)}</span>${k<res.seq.length-1?'<span class="arrow">→</span>':''}`).join('')+`</div></div>`;
+  }else{
+    h+=`<div class="res bad">Unsafe state. ${extra}No process in {${res.stuck.map(P).join(', ')}} can be guaranteed to finish, so a deadlock is possible.</div>`;
+  }
+  if(res.steps.length){
+    h+='<div class="log"><table><tr><th>Step</th><th>Process picked</th><th>Need ≤ Work?</th><th>Work before</th><th>Work after (+ Allocation)</th></tr>'+
+      res.steps.map((s,k)=>`<tr><td>${k+1}</td><td>${P(s.p)}</td><td>(${s.need.join(', ')}) ≤ (${s.before.join(', ')})</td><td>(${s.before.join(', ')})</td><td>(${s.after.join(', ')})</td></tr>`).join('')+'</table></div>';
+  }
+  return h+'</div>';
+}
+$('#chk').onclick=()=>{
+  const need=validateB();if(!need)return;
+  $('#out1').innerHTML=showSafety(bankerSafety(B.alloc,need,B.avail),'Safety check of the current state');
+};
+$('#req').onclick=()=>{
+  const need=validateB();if(!need)return;
+  const i=+$('#rp').value,rq=[...document.querySelectorAll('.rv')].map(x=>Math.max(0,parseInt(x.value)||0));
+  pending=null;$('#grant').classList.add('hidden');
+  const head=`<div class="card"><h2>Request by ${P(i)}: (${rq.join(', ')})</h2>`;
+  if(rq.some((v,j)=>v>need[i][j])){
+    $('#out1').innerHTML=head+`<div class="res bad">Rejected. ${P(i)} is asking for more than its declared remaining need (${need[i].join(', ')}).</div></div>`;return;}
+  if(rq.some((v,j)=>v>B.avail[j])){
+    $('#out1').innerHTML=head+`<div class="res warn">${P(i)} must wait. Not enough resources are available right now (Available = ${B.avail.join(', ')}).</div></div>`;return;}
+  const A2=B.alloc.map(r=>[...r]),N2=need.map(r=>[...r]);
+  const av2=B.avail.map((v,j)=>v-rq[j]);
+  A2[i]=A2[i].map((v,j)=>v+rq[j]);N2[i]=N2[i].map((v,j)=>v-rq[j]);
+  const res=bankerSafety(A2,N2,av2);
+  $('#out1').innerHTML=showSafety(res,`Request by ${P(i)}: (${rq.join(', ')}) — pretend allocation`,
+    res.safe?'The request can be granted. ':'The request must be denied and ')+'';
+  if(res.safe){pending={i,rq};$('#grant').classList.remove('hidden');}
+};
+$('#grant').onclick=()=>{
+  if(!pending)return;
+  const {i,rq}=pending;
+  B.alloc[i]=B.alloc[i].map((v,j)=>v+rq[j]);B.avail=B.avail.map((v,j)=>v-rq[j]);
+  renderB(true);
+  $('#out1').insertAdjacentHTML('afterbegin',`<div class="res ok">Granted: ${P(i)} now holds (${B.alloc[i].join(', ')}). Tables updated.</div>`);
+};
+
+/* ================= DETECTION ================= */
+let D={n:5,m:3,alloc:[],req:[],avail:[]};
+
+function detect(alloc,req,avail){
+  const n=alloc.length;let work=[...avail],steps=[];
+  const fin=alloc.map(r=>r.every(v=>v===0)); // holding nothing => cannot be part of deadlock
+  let progress=true;
+  while(progress){
+    progress=false;
+    for(let i=0;i<n;i++){
+      if(!fin[i]&&req[i].every((x,j)=>x<=work[j])){
+        work=work.map((w,j)=>w+alloc[i][j]);fin[i]=true;progress=true;steps.push({p:i,work:[...work]});}
+    }
+  }
+  return {deadlocked:fin.map((f,i)=>f?-1:i).filter(i=>i>=0),steps};
+}
+/* wait-for graph: Pi → Pj if Pi requests a resource Pj holds */
+function waitFor(alloc,req){
+  const n=alloc.length,edges=[];
+  for(let i=0;i<n;i++)for(let j=0;j<n;j++){
+    if(i!==j&&req[i].some((r,k)=>r>0&&alloc[j][k]>0))edges.push([i,j]);}
+  const reach=zeros(n,n);edges.forEach(([a,b])=>reach[a][b]=1);
+  for(let k=0;k<n;k++)for(let i=0;i<n;i++)for(let j=0;j<n;j++)if(reach[i][k]&&reach[k][j])reach[i][j]=1;
+  const cyc=edges.filter(([a,b])=>reach[b][a]);          // edge lies on a cycle
+  const inCycle=new Set();cyc.forEach(([a,b])=>{inCycle.add(a);inCycle.add(b);});
+  return {edges,cyc,inCycle};
+}
+function drawWFG(n,g){
+  const cx=230,cy=150,r=105,pos=Array.from({length:n},(_,i)=>{const a=2*Math.PI*i/n-Math.PI/2;return[cx+r*Math.cos(a),cy+r*Math.sin(a)];});
+  let s=`<svg viewBox="0 0 460 300" role="img" aria-label="Wait-for graph"><defs>
+   <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--mute)"/></marker>
+   <marker id="ahr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--bad)"/></marker></defs>`;
+  const R0=20;
+  g.edges.forEach(([a,b])=>{
+    const bad=g.cyc.some(([x,y])=>x===a&&y===b);
+    const [x1,y1]=pos[a],[x2,y2]=pos[b];
+    const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy),ux=dx/L,uy=dy/L;
+    const nx=-uy*14,ny=ux*14;                                   // bend so opposite edges don't overlap
+    const sx=x1+ux*R0,sy=y1+uy*R0,ex=x2-ux*(R0+4),ey=y2-uy*(R0+4);
+    s+=`<path d="M${sx} ${sy} Q${(sx+ex)/2+nx} ${(sy+ey)/2+ny} ${ex} ${ey}" fill="none" stroke="${bad?'var(--bad)':'var(--mute)'}" stroke-width="${bad?2.4:1.5}" marker-end="url(#${bad?'ahr':'ah'})"/>`;
+  });
+  pos.forEach(([x,y],i)=>{
+    const bad=g.inCycle.has(i);
+    s+=`<circle cx="${x}" cy="${y}" r="${R0}" fill="${bad?'var(--badbg)':'var(--panel)'}" stroke="${bad?'var(--bad)':'var(--acc)'}" stroke-width="2"/>
+        <text x="${x}" y="${y+5}" text-anchor="middle" font-weight="600" fill="var(--ink)">${P(i)}</text>`;
+  });
+  return s+'</svg>';
+}
+function renderD(){
+  matrix($('#d-alloc'),D.alloc,rows(D.n),cols(D.m));
+  matrix($('#d-req'),D.req,rows(D.n),cols(D.m));
+  matrix($('#d-avail'),[D.avail],null,cols(D.m));
+  $('#out2').innerHTML='';
+}
+function resizeD(){
+  D.n=clamp($('#n2').value,1,8)||1;D.m=clamp($('#m2').value,1,6)||1;
+  D.alloc=resize(D.alloc,D.n,D.m);D.req=resize(D.req,D.n,D.m);D.avail=resize([D.avail],1,D.m)[0];renderD();
+}
+$('#n2').onchange=$('#m2').onchange=resizeD;
+function loadD(a,r,v){D.n=a.length;D.m=v.length;$('#n2').value=D.n;$('#m2').value=D.m;D.alloc=a;D.req=r;D.avail=v;renderD();}
+$('#ex2').onclick=()=>loadD([[0,1,0],[2,0,0],[3,0,3],[2,1,1],[0,0,2]],[[0,0,0],[2,0,2],[0,0,1],[1,0,0],[0,0,2]],[0,0,0]);
+$('#ex3').onclick=()=>loadD([[0,1,0],[2,0,0],[3,0,3],[2,1,1],[0,0,2]],[[0,0,0],[2,0,2],[0,0,0],[1,0,0],[0,0,2]],[0,0,0]);
+
+$('#det').onclick=()=>{
+  const r=detect(D.alloc,D.req,D.avail),g=waitFor(D.alloc,D.req);
+  let h='<div class="card"><h2>Detection result</h2>';
+  if(r.deadlocked.length){
+    h+=`<div class="res bad">Deadlock detected. Deadlocked processes: ${r.deadlocked.map(P).join(', ')}.</div>`;
+  }else{
+    h+=`<div class="res ok">No deadlock. Processes can finish in this order:<div class="seq">`+
+      (r.steps.length?r.steps.map((s,k)=>`<span class="chip">${P(s.p)}</span>${k<r.steps.length-1?'<span class="arrow">→</span>':''}`).join(''):'<span class="muted">no process is holding resources</span>')+'</div></div>';
+  }
+  if(r.steps.length)h+='<div class="log"><table><tr><th>Step</th><th>Process finishes</th><th>Work after release</th></tr>'+
+    r.steps.map((s,k)=>`<tr><td>${k+1}</td><td>${P(s.p)}</td><td>(${s.work.join(', ')})</td></tr>`).join('')+'</table></div>';
+  h+='</div><div class="card"><h2>Wait-for graph</h2>'+drawWFG(D.n,g)+
+    `<p class="muted">An arrow Pi → Pj means Pi is waiting for a resource held by Pj. Red arrows lie on a cycle${g.cyc.length?'':' (none found)'}. `+
+    'With one instance per resource, a cycle means deadlock. With several instances a cycle is necessary but not sufficient, so the matrix algorithm above gives the final verdict.</p></div>';
+  $('#out2').innerHTML=h;
+};
+
+/* init */
+$('#ex1').click();$('#ex2').click();
+</script>
+</body>
+</html>
